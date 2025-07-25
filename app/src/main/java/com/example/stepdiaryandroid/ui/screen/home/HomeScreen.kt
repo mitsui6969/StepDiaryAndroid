@@ -20,6 +20,8 @@ fun HomeScreen(
     viewModel: HomeViewModel
 ) {
     val stepCount by viewModel.stepCount.collectAsState()
+    val distance by viewModel.distance.collectAsState()
+    val calories by viewModel.calories.collectAsState()
 
     // 今日の日付を取得してフォーマット
     val today = LocalDate.now()
@@ -43,8 +45,11 @@ fun HomeScreen(
         }
 
         Row {
-            Text(text="km")
-            Text(text="kcal")
+            Text(text="$distance km")
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(text="$calories kcal")
         }
     }
 }
