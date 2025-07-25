@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 class HomeViewModel(
     private val repository: HealthConnectRepository
@@ -25,6 +27,15 @@ class HomeViewModel(
                 e.printStackTrace()
             }
         }
+    }
+
+    //日時計算
+    fun getTodayTimeRange(): Pair<Instant, Instant> {
+        val zoneId = ZoneId.systemDefault()
+        val today = LocalDate.now(zoneId)
+        val startOfDay = today.atStartOfDay(zoneId).toInstant()
+        val endOfDay = today.plusDays(1).atStartOfDay(zoneId).minusNanos(1).toInstant()
+        return Pair(startOfDay, endOfDay)
     }
 
     class Factory(

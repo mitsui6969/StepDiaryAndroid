@@ -57,6 +57,9 @@ class MainActivity : ComponentActivity() {
             val viewModelFactory = HomeViewModel.Factory(repository)
             homeViewModel = ViewModelProvider(this@MainActivity, viewModelFactory)[HomeViewModel::class.java]
 
+            val (start, end) = homeViewModel.getTodayTimeRange()
+            homeViewModel.loadSteps(start, end)
+
             // UI構築
             setContent {
                 StepDiaryAndroidTheme {
