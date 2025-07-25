@@ -8,20 +8,28 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.permission.HealthPermission.Companion.PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.example.stepdiaryandroid.data.HealthConnectRepository
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.stepdiaryandroid.ui.screen.home.HomeScreen
+import com.example.stepdiaryandroid.data.HealthConnectRepository
+import com.example.stepdiaryandroid.data.worker.ScheduleWorker
 import com.example.stepdiaryandroid.ui.theme.StepDiaryAndroidTheme
 import com.example.stepdiaryandroid.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var healthConnectClient: HealthConnectClient
+    private lateinit var homeViewModel: HomeViewModel
 
     // 権限リクエストのコールバック登録
     private val requestPermissionsLauncher = registerForActivityResult(
@@ -39,6 +47,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         checkHealthConnectAvailability()
+
+        setContent {
+            StepDiaryAndroidTheme {
+                HomeScreen(homeViewModel)
+            }
+        }
     }
 
     private fun checkHealthConnectAvailability() {
@@ -65,27 +79,50 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        // HealthConnectClient を初期化
+        // HealthConnectClient 初期化
         healthConnectClient = HealthConnectClient.getOrCreate(context)
 
-        // ViewModel 作成（Repository → ViewModelFactory経由）
+        // ViewModel 初期化
         val repository = HealthConnectRepository(healthConnectClient)
         val viewModelFactory = HomeViewModel.Factory(repository)
-        val homeViewModel = ViewModelProvider(this, viewModelFactory)[HomeViewModel::class.java]
+        homeViewModel = ViewModelProvider(this, viewModelFactory)[HomeViewModel::class.java]
 
-        // 権限チェックを行い、権限がある場合はすでに操作可能
         lifecycleScope.launch {
+            val featureStatus = healthConnectClient.features.getFeatureStatus(
+                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND
+            )
+
+            // バックグラウンド処理
+            if (featureStatus == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE) {
+                val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+
+                if (PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND !in grantedPermissions) {
+                    Log.d("MainActivity", "バックグラウンド権限なし → Foregroundで実行")
+                    // foreground 読み取り処理をここに書く
+                } else {
+                    Log.d("MainActivity", "バックグラウンド権限あり → WorkManager登録")
+
+                    val periodicWorkRequest = PeriodicWorkRequestBuilder<ScheduleWorker>(
+                        1, TimeUnit.HOURS
+                    ).build()
+
+                    WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+                        "read_health_connect",
+                        ExistingPeriodicWorkPolicy.KEEP,
+                        periodicWorkRequest
+                    )
+                }
+            } else {
+                Log.d("MainActivity", "バックグラウンド未対応 → Foregroundで実行")
+                // foreground 読み取り処理をここに書く
+            }
+
             checkPermissionsAndRun(healthConnectClient)
         }
 
-        // Compose の画面を表示
-        setContent {
-            StepDiaryAndroidTheme {
-                HomeScreen(homeViewModel)
-            }
-        }
     }
 
+    // 権限チェック
     private suspend fun checkPermissionsAndRun(client: HealthConnectClient) {
         val granted = client.permissionController.getGrantedPermissions()
         if (!granted.containsAll(PERMISSIONS)) {

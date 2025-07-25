@@ -10,16 +10,16 @@ class HomeViewModel(
     private val repository: HealthConnectRepository
 ) : ViewModel() {
 
-    fun insertSteps(count: Long = 120L) {
-        viewModelScope.launch {
-            try{
-                repository.insertSteps(count)
-            } catch (e:Exception) {
-                e.printStackTrace() // ログ確認
-            }
-
-        }
-    }
+//    fun insertSteps(count: Long = 120L) {
+//        viewModelScope.launch {
+//            try{
+//                repository.insertSteps(count)
+//            } catch (e:Exception) {
+//                e.printStackTrace() // ログ確認
+//            }
+//
+//        }
+//    }
 
     class Factory(
         private val repository: HealthConnectRepository
