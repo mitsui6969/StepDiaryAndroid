@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import com.example.stepdiaryandroid.viewmodel.HomeViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 
 @Composable
@@ -18,6 +20,13 @@ fun HomeScreen(
     viewModel: HomeViewModel
 ) {
     val stepCount by viewModel.stepCount.collectAsState()
+    val distance by viewModel.distance.collectAsState()
+    val calories by viewModel.calories.collectAsState()
+
+    // 今日の日付を取得してフォーマット
+    val today = LocalDate.now()
+    val formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日")
+    val formattedDate = today.format(formatter)
 
     Column(
         modifier = Modifier
@@ -27,7 +36,7 @@ fun HomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Text(text = "yy/mm/dd")
+        Text(text = formattedDate)
         Spacer(modifier = Modifier.height(16.dp))
 
         Column {
@@ -36,8 +45,11 @@ fun HomeScreen(
         }
 
         Row {
-            Text(text="km")
-            Text(text="kcal")
+            Text(text="$distance km")
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(text="$calories kcal")
         }
     }
 }

@@ -16,13 +16,22 @@ class HomeViewModel(
 ) : ViewModel() {
 
     private val _stepCount = MutableStateFlow<Long>(0)
-    val stepCount: StateFlow<Long> = _stepCount
+    private val _distance = MutableStateFlow<Double>(0.0)
+    private val _calories = MutableStateFlow<Double>(0.0)
 
+    val stepCount: StateFlow<Long> = _stepCount
+    val distance: StateFlow<Double> = _distance
+    val calories: StateFlow<Double> = _calories
+
+    // 歩数取得
     fun loadSteps(startTime: Instant, endTime: Instant) {
         viewModelScope.launch {
             try {
-                val steps = repository.readStepsByTimeRange(startTime, endTime)
+                val (steps, dist, kcal) = repository.readStepsByTimeRange(startTime, endTime)
                 _stepCount.value = steps
+                _distance.value = dist
+                _calories.value = kcal
+
             } catch (e: Exception) {
                 e.printStackTrace()
             }
