@@ -4,22 +4,28 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.stepdiaryandroid.data.HealthConnectRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 class HomeViewModel(
     private val repository: HealthConnectRepository
 ) : ViewModel() {
 
-//    fun insertSteps(count: Long = 120L) {
-//        viewModelScope.launch {
-//            try{
-//                repository.insertSteps(count)
-//            } catch (e:Exception) {
-//                e.printStackTrace() // ログ確認
-//            }
-//
-//        }
-//    }
+    private val _stepCount = MutableStateFlow<Long>(0)
+    val stepCount: StateFlow<Long> = _stepCount
+
+    fun loadSteps(startTime: Instant, endTime: Instant) {
+        viewModelScope.launch {
+            try {
+                val steps = repository.readStepsByTimeRange(startTime, endTime)
+                _stepCount.value = steps
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     class Factory(
         private val repository: HealthConnectRepository

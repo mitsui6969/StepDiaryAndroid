@@ -10,21 +10,22 @@ import androidx.health.connect.client.time.TimeRangeFilter
 class HealthConnectRepository(private val healthConnectClient: HealthConnectClient) {
 
     suspend fun readStepsByTimeRange(
-        healthConnectClient: HealthConnectClient,
+//        healthConnectClient: HealthConnectClient,
         startTime: Instant,
         endTime: Instant
-    ) {
-        try {
+    ):Long {
+        return try {
             val response = healthConnectClient.aggregate(
                 AggregateRequest(
                     metrics = setOf(StepsRecord.COUNT_TOTAL),
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
             )
-            // The result may be null if no data is available in the time range
-            val stepCount = response[StepsRecord.COUNT_TOTAL]
+
+            response[StepsRecord.COUNT_TOTAL] ?: 0L
         } catch (e: Exception) {
-            // Run error handling here
+            e.printStackTrace()
+            0L
         }
     }
 }

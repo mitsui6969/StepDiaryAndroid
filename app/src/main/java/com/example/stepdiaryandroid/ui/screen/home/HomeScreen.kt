@@ -4,15 +4,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.stepdiaryandroid.viewmodel.HomeViewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
+
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel
 ) {
+    val stepCount by viewModel.stepCount.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -25,7 +31,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Column {
-            Text(text="1000")
+            Text(text="$stepCount")
             Text(text="steps")
         }
 

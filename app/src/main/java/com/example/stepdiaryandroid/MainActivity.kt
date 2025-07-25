@@ -46,90 +46,94 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        checkHealthConnectAvailability()
-
-        setContent {
-            StepDiaryAndroidTheme {
-                HomeScreen(homeViewModel)
-            }
-        }
-    }
-
-    private fun checkHealthConnectAvailability() {
-        val context = this
-        val providerPackageName = "com.google.android.apps.healthdata"
-        val availabilityStatus = HealthConnectClient.getSdkStatus(context, providerPackageName)
-
-        if (availabilityStatus == HealthConnectClient.SDK_UNAVAILABLE) {
-            Log.e("MainActivity", "Health Connect SDKが利用不可です")
-            return
-        }
-
-        if (availabilityStatus == HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED) {
-            val uriString =
-                "market://details?id=$providerPackageName&url=healthconnect%3A%2F%2Fonboarding"
-            startActivity(
-                Intent(Intent.ACTION_VIEW).apply {
-                    setPackage("com.android.vending")
-                    data = Uri.parse(uriString)
-                    putExtra("overlay", true)
-                    putExtra("callerId", context.packageName)
-                }
-            )
-            return
-        }
-
-        // HealthConnectClient 初期化
-        healthConnectClient = HealthConnectClient.getOrCreate(context)
-
-        // ViewModel 初期化
-        val repository = HealthConnectRepository(healthConnectClient)
-        val viewModelFactory = HomeViewModel.Factory(repository)
-        homeViewModel = ViewModelProvider(this, viewModelFactory)[HomeViewModel::class.java]
-
         lifecycleScope.launch {
-            val featureStatus = healthConnectClient.features.getFeatureStatus(
-                HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND
-            )
+            val available = checkHealthConnectAvailability()
+            if (!available) return@launch
 
-            // バックグラウンド処理
-            if (featureStatus == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE) {
-                val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+            checkPermissionsAndRun()
 
-                if (PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND !in grantedPermissions) {
-                    Log.d("MainActivity", "バックグラウンド権限なし → Foregroundで実行")
-                    // foreground 読み取り処理をここに書く
-                } else {
-                    Log.d("MainActivity", "バックグラウンド権限あり → WorkManager登録")
+            // ViewModel 初期化
+            val repository = HealthConnectRepository(healthConnectClient)
+            val viewModelFactory = HomeViewModel.Factory(repository)
+            homeViewModel = ViewModelProvider(this@MainActivity, viewModelFactory)[HomeViewModel::class.java]
 
-                    val periodicWorkRequest = PeriodicWorkRequestBuilder<ScheduleWorker>(
-                        1, TimeUnit.HOURS
-                    ).build()
-
-                    WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-                        "read_health_connect",
-                        ExistingPeriodicWorkPolicy.KEEP,
-                        periodicWorkRequest
-                    )
+            // UI構築
+            setContent {
+                StepDiaryAndroidTheme {
+                    HomeScreen(homeViewModel)
                 }
-            } else {
-                Log.d("MainActivity", "バックグラウンド未対応 → Foregroundで実行")
-                // foreground 読み取り処理をここに書く
             }
 
-            checkPermissionsAndRun(healthConnectClient)
+            // WorkManager登録（バックグラウンド対応チェック含む）
+            scheduleBackgroundWorkIfNeeded()
         }
-
     }
 
-    // 権限チェック
-    private suspend fun checkPermissionsAndRun(client: HealthConnectClient) {
-        val granted = client.permissionController.getGrantedPermissions()
+    // Health Connect の利用可否と初期化
+    private suspend fun checkHealthConnectAvailability(): Boolean {
+        val providerPackageName = "com.google.android.apps.healthdata"
+        val status = HealthConnectClient.getSdkStatus(this, providerPackageName)
+
+        when (status) {
+            HealthConnectClient.SDK_UNAVAILABLE -> {
+                Log.e("MainActivity", "Health Connect SDKが利用不可です")
+                return false
+            }
+
+            HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> {
+                val uri = Uri.parse("market://details?id=$providerPackageName&url=healthconnect%3A%2F%2Fonboarding")
+                startActivity(Intent(Intent.ACTION_VIEW).apply {
+                    setPackage("com.android.vending")
+                    data = uri
+                    putExtra("overlay", true)
+                    putExtra("callerId", packageName)
+                })
+                return false
+            }
+        }
+
+        healthConnectClient = HealthConnectClient.getOrCreate(this)
+        return true
+    }
+
+    // 権限チェックとリクエスト
+    private suspend fun checkPermissionsAndRun() {
+        val granted = healthConnectClient.permissionController.getGrantedPermissions()
         if (!granted.containsAll(PERMISSIONS)) {
             requestPermissionsLauncher.launch(PERMISSIONS)
         } else {
             Log.d("MainActivity", "権限はすでに付与済みです")
         }
+    }
+
+    // バックグラウンド読み取り処理の登録
+    private suspend fun scheduleBackgroundWorkIfNeeded() {
+        val status = healthConnectClient.features.getFeatureStatus(
+            HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND
+        )
+
+        if (status != HealthConnectFeatures.FEATURE_STATUS_AVAILABLE) {
+            Log.d("MainActivity", "バックグラウンド未対応 → Foregroundで実行")
+            return
+        }
+
+        val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+        if (PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND !in grantedPermissions) {
+            Log.d("MainActivity", "バックグラウンド権限なし → Foregroundで実行")
+            return
+        }
+
+        Log.d("MainActivity", "バックグラウンド権限あり → WorkManager登録")
+
+        val request = PeriodicWorkRequestBuilder<ScheduleWorker>(
+            1, TimeUnit.HOURS
+        ).build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "read_health_connect",
+            ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
     }
 
     companion object {
@@ -139,5 +143,3 @@ class MainActivity : ComponentActivity() {
         )
     }
 }
-
-
