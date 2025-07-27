@@ -30,7 +30,7 @@ class HealthConnectRepository(private val healthConnectClient: HealthConnectClie
             )
 
             val steps = response[StepsRecord.COUNT_TOTAL] ?: 0L
-            val distanceRaw = response[DistanceRecord.DISTANCE_TOTAL]?.inMeters ?: 0.0
+            val distanceRaw = response[DistanceRecord.DISTANCE_TOTAL]?.inKilometers ?: 0.0
             val caloriesRaw = response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories ?: 0.0
             val distance = round(distanceRaw * 10) / 10.0
             val calories = round(caloriesRaw * 10) / 10.0
