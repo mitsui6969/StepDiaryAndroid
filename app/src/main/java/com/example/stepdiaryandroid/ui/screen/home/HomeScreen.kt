@@ -1,5 +1,6 @@
 package com.example.stepdiaryandroid.ui.screen.home
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,10 +10,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.stepdiaryandroid.viewmodel.HomeViewModel
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import com.example.stepdiaryandroid.ui.theme.ThemeOrenge
 
 
 @Composable
@@ -27,7 +34,7 @@ fun HomeScreen(
 
     // 今日の日付を取得してフォーマット
     val today = LocalDate.now()
-    val formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日")
+    val formatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日 E曜日", Locale.JAPANESE)
     val formattedDate = today.format(formatter)
 
     Column(
@@ -41,10 +48,7 @@ fun HomeScreen(
         Text(text = formattedDate)
         Spacer(modifier = Modifier.height(16.dp))
 
-        Column {
-            Text(text="$stepCount")
-            Text(text="steps")
-        }
+        StepsView(stepCount, ThemeOrenge)
 
         Row {
             Text(text="$distance km")
@@ -55,19 +59,61 @@ fun HomeScreen(
         }
 
         Column {
-            Text(text = "目標: $targetSteps 歩", fontSize = 20.sp)
+            Text(text = "目標made: $targetSteps 歩")
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Text(text = "あと $remainingSteps 歩", fontSize = 24.sp)
+            Text(text = "あと $remainingSteps 歩")
 
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-@Preview
+// ステップ数の丸
+@Composable
+fun StepsView(
+    steps: Long,
+    color: Color,
+    modifier: Modifier = Modifier
+){
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(250.dp)
+    ){
+        Canvas(modifier = Modifier.matchParentSize()) {
+            val strokeWidth = 8f
+            // drawCircleにstyleを指定することで、塗りつぶしではなく線で描画します
+            drawCircle(
+                color = color,
+                radius = (size.minDimension / 2) - (strokeWidth / 2), // Boxのサイズに追従するように半径を計算
+                style = Stroke(width = strokeWidth)
+            )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ){
+            Text(
+                text="$steps",
+                fontSize = 44.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                text="steps",
+                fontSize = 20.sp,
+                color = Color.Gray
+            )
+        }
+    }
+}
+
+// 目標コンポーす
+
+
+@Preview(showBackground = true)
 @Composable
 fun HomeScreenView(){
-
+    StepsView(100, ThemeOrenge)
 }
