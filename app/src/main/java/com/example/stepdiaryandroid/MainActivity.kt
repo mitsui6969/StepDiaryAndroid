@@ -20,9 +20,12 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.stepdiaryandroid.ui.screen.home.HomeScreen
 import com.example.stepdiaryandroid.data.HealthConnectRepository
+import com.example.stepdiaryandroid.data.UserRepository
 import com.example.stepdiaryandroid.data.worker.ScheduleWorker
+import com.example.stepdiaryandroid.ui.screen.AppScreen
 import com.example.stepdiaryandroid.ui.theme.StepDiaryAndroidTheme
 import com.example.stepdiaryandroid.viewmodel.HomeViewModel
+import com.example.stepdiaryandroid.viewmodel.SettingViewModel
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
@@ -30,6 +33,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var healthConnectClient: HealthConnectClient
     private lateinit var homeViewModel: HomeViewModel
+    private lateinit var settingsViewModel: SettingViewModel
 
     // 権限リクエストのコールバック登録
     private val requestPermissionsLauncher = registerForActivityResult(
@@ -54,8 +58,13 @@ class MainActivity : ComponentActivity() {
 
             // ViewModel 初期化
             val repository = HealthConnectRepository(healthConnectClient)
-            val viewModelFactory = HomeViewModel.Factory(repository)
-            homeViewModel = ViewModelProvider(this@MainActivity, viewModelFactory)[HomeViewModel::class.java]
+            val userRepository = UserRepository(applicationContext)
+
+            val homeViewModelFactory = HomeViewModel.Factory(repository, userRepository)
+            homeViewModel = ViewModelProvider(this@MainActivity, homeViewModelFactory)[HomeViewModel::class.java]
+
+            val settingsViewModelFactory = SettingViewModel.Factory(userRepository)
+            settingsViewModel = ViewModelProvider(this@MainActivity, settingsViewModelFactory)[SettingViewModel::class.java]
 
             val (start, end) = homeViewModel.getTodayTimeRange()
             homeViewModel.loadSteps(start, end)
@@ -63,7 +72,7 @@ class MainActivity : ComponentActivity() {
             // UI構築
             setContent {
                 StepDiaryAndroidTheme {
-                    HomeScreen(homeViewModel)
+                    AppScreen(homeViewModel, settingsViewModel)
                 }
             }
 

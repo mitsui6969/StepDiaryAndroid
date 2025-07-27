@@ -59,4 +59,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.connect.client) // ヘルスコネクト
+    implementation(libs.androidx.datastore.preferences) // DataStore
+    implementation(libs.androidx.navigation.compose) // Navigation
 }
